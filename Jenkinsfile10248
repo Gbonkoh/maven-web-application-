@@ -1,0 +1,39 @@
+node{
+ def mavenHome = tool name: 'maven3.9.3'
+ stage('1CloneCode'){
+    //pipeline syntax if private repo
+    sh "echo running a sofware build deployment project for paypal"
+    git "https://github.com/Gbonkoh/maven-web-application-"
+    //sh "https://github.com/Gbonkoh/maven-web-application"
+    //bat "https://github.com/Gbonkoh/maven-web-application-"
+}
+stage('2Test&Build'){
+   sh "${mavenHome}/bin/mvn install"
+}
+stage('3CodeQuality'){
+   sh "${mavenHome}/bin/mvn sonar:sonar"
+}
+stage('4UploadArtifacts'){
+   sh "${mavenHome}/bin/mvn deploy"
+}
+stage('5Deploy_uat'){
+ //pipeline syntax
+   deploy adapters: [tomcat9(credentialsId: 'tomcatcredentials', path: '', url: 'http://18.188.249.43:8080/')], contextPath: null, war: 'target/*war'
+}
+stage('6Approval'){
+   timeout(time:9, unit:'HOURS'){
+       input message: 'Application ready for deployment, please review and approve' 
+}
+}
+stage('7Deploy_Prod'){
+   deploy adapters: [tomcat9(credentialsId: 'tomcatcredentials', path: '', url: 'http://18.188.249.43:8080/')], contextPath: null, war: 'target/*war'
+}
+stage('8Notification'){
+ //pipeline syntax
+ emailext body: '''Build status for front end application.
+
+Regards,
+Landmark Technologies''', recipientProviders: [buildUser(), contributor(), developers()], subject: 'Build Status', to: 'paypaL-team@gmail.com'
+ }
+
+}
